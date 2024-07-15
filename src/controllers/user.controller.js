@@ -6,18 +6,33 @@ import { userUpdateSchema } from "../schemas/user.schema.js";
  *
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
- * @returns {Promise<Object>} The response object containing the users.
+ * @returns {Object} The response object containing the users and pagination metadata.
  */
 export async function getAllUsers(req, res) {
-  const { page = 1, limit = 10 } = req.query;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
 
   try {
+    const totalItems = await prisma.user.count();
+
     const users = await prisma.user.findMany({
       skip: (page - 1) * limit,
       take: limit,
     });
 
-    return res.send(users);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const response = {
+      users,
+      meta: {
+        totalItems,
+        currentPage: page,
+        pageSize: limit,
+        totalPages,
+      },
+    };
+
+    return res.send(response);
   } catch (error) {
     console.error(error);
     return res.status(500).send({ message: "Error getting users" });
